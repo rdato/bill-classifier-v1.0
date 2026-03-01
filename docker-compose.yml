@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    container_name: bill-backend
+    restart: always
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./uploads:/app/uploads
+      - ./outputs:/app/outputs
+      - ./data:/app/data
+    environment:
+      - FLASK_ENV=production
+
+  frontend:
+    build: ./frontend
+    container_name: bill-frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
