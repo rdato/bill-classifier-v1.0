@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# 测试和输出文件
+test_output.xlsx
+账单分类_*.xlsx
+wheels/
+
+# 用户数据（隐私）
+微信*.xlsx
+支付宝*.csv
+*.xlsx
+*.csv
+
+# 临时文件
+*.tmp
+*.log
+.DS_Store
+Thumbs.db
+
+# Claude
+.claude/

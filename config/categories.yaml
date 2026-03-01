@@ -1,0 +1,53 @@
+# DailyBill 分类规则配置
+
+# 分类列表
+categories:
+  - 旅行
+  - 住房相关
+  - 餐饮
+  - 汽车
+  - 日用百货
+  - 备婚
+  - 人情
+  - 交通
+  - 数码电器
+  - 文化休闲
+  - 服饰
+  - 通讯
+  - 家居家装
+  - 水电燃气费
+  - 医疗
+  - 美妆护肤
+  - 运动户外
+  - 学习
+  - 其他支出
+
+# 默认分类
+default_category: 其他支出
+
+# 置信度阈值
+confidence_threshold: 0.5
+
+# 支持的输入格式
+input_formats:
+  - xlsx
+  - xls
+  - csv
+
+# 输出格式
+output_format: xlsx
+
+# 类型映射
+type_mapping:
+  income:
+    - 收入
+    - 收款
+    - 退款
+    - 转入
+    - 贷
+  expense:
+    - 支出
+    - 付款
+    - 消费
+    - 转出
+    - 借
