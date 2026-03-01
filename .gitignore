@@ -5,7 +5,9 @@ __pycache__/
 *.so
 .Python
 venv/
+env/
 ENV/
+.venv/
 *.db
 
 # Node
@@ -26,9 +28,17 @@ Thumbs.db
 # Uploads & Outputs
 uploads/
 outputs/
+test_output.xlsx
+账单分类_*.xlsx
+wheels/
+
+# 用户数据（隐私）
+微信*.xlsx
+支付宝*.csv
 
 # Logs
 *.log
+*.tmp
 
 # Env
 .env
