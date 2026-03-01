@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+ENV/
+*.db
+
+# Node
+node_modules/
+dist/
+.npm
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Uploads & Outputs
+uploads/
+outputs/
+
+# Logs
+*.log
+
+# Env
+.env
+.env.local
