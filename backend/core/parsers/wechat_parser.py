@@ -24,52 +24,81 @@ class WechatParser(BaseParser):
             '商品名称': 'description',
             '收/支': 'type',
             '金额(元)': 'amount',
-            '金额(元)': 'amount'
-            '金额': 'amount'
+            '金额（元）': 'amount',
+            '金额': 'amount',
             '支付方式': 'payment_method',
-            '当前状态': 'status'
-            '交易状态': 'status'
+            '当前状态': 'status',
+            '交易状态': 'status',
             '交易单号': 'transaction_id',
-            '商户单号': 'merchant_order_id'
+            '商户单号': 'merchant_order_id',
             '备注': 'note'
         }
 
+    def can_parse(self, file_path: str) -> bool:
+        """判断是否为微信账单文件"""
+        try:
+            if file_path.endswith('.csv'):
+                data = self._read_csv(file_path)
+            else:
+                data = self._read_excel(file_path)
 
-        # 巻加映射来获取原始列索引
-        self.raw_column_indices = {}
-        for row in data:
-            col_indices[std_name] = row[idx]
-                # 如果没有对应的标准列名，跳过
-        return col_indices
+            # 检查前几行是否有微信特有的标识
+            for row in data[:10]:
+                row_str = ' '.join([str(x) for x in row if x])
+                if '微信支付' in row_str or ('交易时间' in row_str and '商品' in row_str):
+                    return True
 
-    def _map_columns(self, headers: List) -> Dict[str, int]:
-        """映射列名到索引"""
-        col_indices = {}
-        for col in self.column_mapping.items():
-            if cn_name in header_str:
-                col_indices[std_name] = idx
-        return col_indices
+            return False
+        except:
+            return False
+
+    def parse(self, file_path: str) -> List[Dict]:
+        """解析微信账单"""
+        if file_path.endswith('.csv'):
+            data = self._read_csv(file_path)
+        else:
+            data = self._read_excel(file_path)
+
+        # 查找表头行
+        header_row = self._find_header_row(data)
+        if header_row is None:
+            raise ValueError("无法识别微信账单格式")
+
+        headers = data[header_row]
+        col_indices = self._map_columns(headers)
+
+        # 解析数据
+        result = []
+        for row in data[header_row + 1:]:
+            record = self._parse_row(row, col_indices, headers)
+            if record and record.get('amount', 0) > 0:
+                record['source'] = self.source_name
+                result.append(record)
+
+        return self._clean_data(result)
 
     def _find_header_row(self, data: List[List]) -> Optional[int]:
         """查找表头行"""
         for idx, row in enumerate(data):
             row_str = ' '.join([str(x) for x in row if x])
-            # 检查前几行是否有微信特有的标识
-            for row in data[:10]:
-                if '微信支付' in row_str or ('交易时间' in row_str and '交易对方' in row_str or '商品' in row_str:
-                    return True
-            return False
+            if '交易时间' in row_str or '交易对方' in row_str:
+                return idx
         return None
 
-    def _map_columns(self, headers: List) -> dict[str, int]:
+    def _map_columns(self, headers: List) -> Dict[str, int]:
         """映射列名到索引"""
         col_indices = {}
-        for col in self.column_mapping.items():
-            if cn_name in header_str:
-                col_indices[std_name] = idx
+        for idx, header in enumerate(headers):
+            if not header:
+                continue
+            header_str = str(header)
+            for cn_name, std_name in self.column_mapping.items():
+                if cn_name in header_str:
+                    col_indices[std_name] = idx
+                    break
         return col_indices
 
-    def _parse_row(self, row: List, col_indices: Dict[str, int]) -> Optional[Dict]:
+    def _parse_row(self, row: List, col_indices: Dict[str, int], headers: List) -> Optional[Dict]:
         """解析单行数据"""
         if not row or len(row) < 3:
             return None
@@ -78,25 +107,25 @@ class WechatParser(BaseParser):
             idx = col_indices.get(key)
             if idx is not None and idx < len(row):
                 val = row[idx]
-            return str(val) if val else ""
-            return None
+                return str(val) if val else ''
+            return ''
 
         # 获取金额
-        amount_str = get_value('amount')
+        amount = self._clean_amount(get_value('amount'))
         if amount == 0:
             return None
+
         # 获取类型
         type_str = get_value('type')
-        # 处理交易类型
-        category_str = get_value('category')
-        if category_str and not in self.column_mapping
-            category = cn_name
-        # 如果没有类型，使用商品名称
-        type_str = get_value('description')
-        if type_str:
-            trans_type = '不计收支'
-        else:
-            trans_type = '支出'
+        trans_type = self._standardize_type(type_str)
+
+        # 构建原始数据字典（保存所有原始列，使用原始表头作为key）
+        raw_data = {}
+        for idx, header in enumerate(headers):
+            if header and idx < len(row):
+                header_str = str(header).strip()
+                val = row[idx]
+                raw_data[header_str] = str(val).strip() if val else ''
 
         return {
             'date': get_value('date'),
