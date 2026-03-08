@@ -3,6 +3,9 @@
 """
 import os
 import uuid
+import json
+import csv
+import io
 from datetime import datetime
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
@@ -120,7 +123,8 @@ def upload_file():
                 amount=record.get('amount', 0),
                 type=record.get('type', '支出'),
                 source=record.get('source', ''),
-                confidence=record.get('confidence', 0)
+                confidence=record.get('confidence', 0),
+                raw_data=json.dumps(record.get('raw_data', {}), ensure_ascii=False)
             )
             db.session.add(db_record)
 
@@ -303,6 +307,90 @@ def export_records():
             as_attachment=True,
             download_name=filename,
             mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+
+    except Exception as e:
+        return jsonify({'error': f'导出失败: {str(e)}'}), 500
+
+
+@app.route('/api/export/original/<source>', methods=['GET'])
+def export_original(source):
+    """
+    导出原始格式（按来源分开导出，保留所有原始列，只替换分类）
+
+    Args:
+        source: alipay / wechat / bank
+    """
+    # 来源名称映射
+    source_map = {
+        'alipay': '支付宝',
+        'wechat': '微信',
+        'bank': '银行'
+    }
+
+    source_name = source_map.get(source.lower())
+    if not source_name:
+        return jsonify({'error': '不支持的来源类型，请使用 alipay/wechat/bank'}), 400
+
+    try:
+        # 查询该来源的所有记录
+        records = Record.query.filter(Record.source == source_name).order_by(Record.date.desc()).all()
+
+        if not records:
+            return jsonify({'error': f'没有{source_name}来源的数据'}), 400
+
+        # 定义各来源的列顺序（与原始账单格式一致）
+        column_order = {
+            '支付宝': ['交易时间', '交易分类', '交易对方', '对方账号', '商品说明', '收/支', '金额', '收/付款方式', '交易状态', '交易订单号', '商家订单号', '备注'],
+            '微信': ['交易时间', '交易类型', '交易对方', '商品', '收/支', '金额(元)', '支付方式', '当前状态', '交易单号', '商户单号', '备注'],
+            '银行': ['交易日期', '摘要', '对方户名', '对方账号', '借方发生额', '贷方发生额', '账户余额', '借/贷', '备注']
+        }
+
+        headers = column_order.get(source_name, [])
+
+        # 生成 CSV 内容
+        output = io.StringIO()
+        # 使用 utf-8-sig 编码以便 Excel 正确识别中文
+        output.write('\ufeff')  # BOM
+        writer = csv.writer(output, lineterminator='\n')
+
+        # 写入表头
+        writer.writerow(headers)
+
+        # 写入数据行
+        for record in records:
+            raw_data = {}
+            if record.raw_data:
+                try:
+                    raw_data = json.loads(record.raw_data)
+                except:
+                    pass
+
+            # 构建行数据
+            row = []
+            for col in headers:
+                if col == '交易分类' or col == '交易类型':
+                    # 分类列使用系统分类结果
+                    row.append(record.category)
+                elif col in raw_data:
+                    row.append(raw_data[col])
+                else:
+                    row.append('')
+
+            writer.writerow(row)
+
+        # 生成响应
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f'{source_name}_原始格式_{timestamp}.csv'
+
+        # 转换为 bytes
+        content = output.getvalue().encode('utf-8-sig')
+
+        return send_file(
+            io.BytesIO(content),
+            as_attachment=True,
+            download_name=filename,
+            mimetype='text/csv; charset=utf-8'
         )
 
     except Exception as e:

@@ -18,10 +18,18 @@ class Record(db.Model):
     type = db.Column(db.String(20), default='支出')
     source = db.Column(db.String(50))
     confidence = db.Column(db.Float, default=0.0)
+    raw_data = db.Column(db.Text)  # 存储原始数据的 JSON 字符串
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     def to_dict(self):
         """转换为字典"""
+        import json
+        raw_data_dict = {}
+        if self.raw_data:
+            try:
+                raw_data_dict = json.loads(self.raw_data)
+            except:
+                pass
         return {
             'id': self.id,
             'date': self.date,
@@ -32,6 +40,7 @@ class Record(db.Model):
             'type': self.type,
             'source': self.source or '',
             'confidence': self.confidence,
+            'raw_data': raw_data_dict,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
 

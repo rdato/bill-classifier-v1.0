@@ -150,6 +150,14 @@ class AlipayParser(BaseParser):
         if trans_type == '不计收支':
             return None
 
+        # 构建原始数据字典（保存所有原始列）
+        raw_data = {}
+        for cn_name, std_name in self.column_mapping.items():
+            idx = col_indices.get(std_name)
+            if idx is not None and idx < len(row):
+                val = row[idx]
+                raw_data[cn_name] = str(val).strip() if val else ''
+
         return {
             'date': get_value('date'),
             'category': '',  # 分类由分类器处理
@@ -157,7 +165,8 @@ class AlipayParser(BaseParser):
             'description': get_value('description'),
             'amount': amount,
             'type': trans_type,
-            'source': self.source_name
+            'source': self.source_name,
+            'raw_data': raw_data
         }
 
     def _standardize_alipay_type(self, type_str: str) -> str:

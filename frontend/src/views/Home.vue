@@ -37,6 +37,33 @@
           </svg>
           导出
         </button>
+        <div class="dropdown">
+          <button class="btn btn-secondary" @click="showExportMenu = !showExportMenu">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            原始格式导出
+            <svg class="dropdown-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </button>
+          <div class="dropdown-menu" v-if="showExportMenu">
+            <button class="dropdown-item" @click="handleExportOriginal('alipay')">
+              <span class="source-icon alipay">支</span>
+              导出支付宝格式
+            </button>
+            <button class="dropdown-item" @click="handleExportOriginal('wechat')">
+              <span class="source-icon wechat">微</span>
+              导出微信格式
+            </button>
+            <button class="dropdown-item" @click="handleExportOriginal('bank')">
+              <span class="source-icon bank">银</span>
+              导出银行格式
+            </button>
+          </div>
+        </div>
         <button class="btn btn-ghost" @click="handleClear">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="3 6 5 6 21 6"/>
@@ -254,10 +281,13 @@ const getRecords = (params) => api.get('/records', { params })
 const updateRecord = (id, data) => api.put(`/records/${id}`, data)
 const getStats = () => api.get('/stats')
 const exportExcelApi = () => api.get('/export', { responseType: 'blob' })
+const exportOriginalApi = (source) => api.get(`/export/original/${source}`, { responseType: 'blob' })
 const clearRecordsApi = () => api.post('/clear')
 
 const props = defineProps({ stats: Object, categories: Array })
 const emit = defineEmits(['refresh'])
+
+const showExportMenu = ref(false)
 
 const colors = [
   '#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f97316',
@@ -354,6 +384,24 @@ const handleExport = async () => {
     ElMessage.success('导出成功')
   } catch (err) {
     ElMessage.error('导出失败')
+  }
+}
+
+const handleExportOriginal = async (source) => {
+  showExportMenu.value = false
+  const sourceNames = { alipay: '支付宝', wechat: '微信', bank: '银行' }
+  try {
+    const res = await exportOriginalApi(source)
+    const blob = new Blob([res], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${sourceNames[source]}_原始格式_${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+    ElMessage.success('导出成功')
+  } catch (err) {
+    ElMessage.error(err.message || '导出失败')
   }
 }
 
@@ -468,6 +516,85 @@ onMounted(() => { if (props.stats.total_records > 0) loadRecords() })
 .btn-ghost:hover {
   background: #f8fafc;
   border-color: #cbd5e1;
+}
+
+.btn-secondary {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+.btn-secondary:hover {
+  background: #e2e8f0;
+}
+
+.dropdown-arrow {
+  width: 14px;
+  height: 14px;
+  transition: transform 0.2s;
+}
+
+.dropdown {
+  position: relative;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  min-width: 160px;
+  z-index: 100;
+  overflow: hidden;
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 14px;
+  border: none;
+  background: none;
+  font-size: 13px;
+  color: #334155;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s;
+}
+
+.dropdown-item:hover {
+  background: #f8fafc;
+}
+
+.source-icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.source-icon.alipay {
+  background: #eff6ff;
+  color: #3b82f6;
+}
+
+.source-icon.wechat {
+  background: #ecfdf5;
+  color: #10b981;
+}
+
+.source-icon.bank {
+  background: #fffbeb;
+  color: #d97706;
 }
 
 /* 加载 */
