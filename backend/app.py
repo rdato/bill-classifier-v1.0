@@ -7,7 +7,7 @@ import json
 import csv
 import io
 from datetime import datetime
-from flask import Flask, request, jsonify, send_file
+from flask import Flask, request, jsonify, send_file, Response
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 
@@ -24,12 +24,19 @@ app = Flask(__name__)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{os.path.join(BASE_DIR, "records.db")}'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['JSON_AS_ASCII'] = False  # 支持中文输出
 app.config['UPLOAD_FOLDER'] = os.path.join(BASE_DIR, '..', 'uploads')
 app.config['OUTPUT_FOLDER'] = os.path.join(BASE_DIR, '..', 'outputs')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB 最大上传
 
 # 启用 CORS
 CORS(app)
+
+
+def json_response(data):
+    """返回支持中文的 JSON 响应"""
+    return Response(json.dumps(data, ensure_ascii=False), mimetype='application/json; charset=utf-8')
+
 
 # 初始化数据库
 init_db(app)
@@ -224,7 +231,7 @@ def reclassify_records():
 def get_categories():
     """获取分类列表"""
     categories = keyword_matcher.get_categories()
-    return jsonify({'categories': categories})
+    return json_response({'categories': categories})
 
 
 @app.route('/api/stats', methods=['GET'])
